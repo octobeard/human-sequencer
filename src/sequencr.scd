@@ -1,7 +1,5 @@
 MIDIIn.connectAll;    // lazy, refine in the future to specific channel
 s.boot;
-s.meter;
-
 
 // Ableton Push 2 8x8 grid midi note mappings
 (
@@ -27,39 +25,36 @@ s.meter;
 	Array.fill(8, 0),
 ];
 
-)
-
+~channel = 0; // input channel, 0-based index so this is MIDI-channel 1
 
 //player definition and init
-(
 // turn into proper class
 ~player = {
-	arg name, beat_list;
+	arg name, row, beat_list;
 	{
-		arg i;
+		arg col;
 		var amp;
 
-		// [i, beat_list].postln;
-		//
-		// amp = beat_list.at(i);
-		~beat_grid.do { arg beat_row; beat_row.postln;};''.postln;
+		amp = beat_list.at(col);
+		// [name, row, col, amp, beat_list].postln;
+		// ~beat_grid.do { arg beat_row; beat_row.postln;};''.postln;
 
 		if (amp != nil, {
-			if( amp>0, { ["Playing: ", name, " step ", i].postln; } );
+			if( amp>0, { ["Playing: ", name, " step ", col].postln; } );
 		});
 		// add synth playback here, passing in beat_list and amp value
 	}
 };
 
 ~player_rows = [
-	~player.value("Row 1", ~beat_grid.at(0)),
-	~player.value("Row 2", ~beat_grid.at(1)),
-	~player.value("Row 3", ~beat_grid.at(2)),
-	~player.value("Row 4", ~beat_grid.at(3)),
-	~player.value("Row 5", ~beat_grid.at(4)),
-	~player.value("Row 6", ~beat_grid.at(5)),
-	~player.value("Row 7", ~beat_grid.at(6)),
-	~player.value("Row 8", ~beat_grid.at(7)),
+	~player.value("Row 1", 0, ~beat_grid.at(0)),
+	~player.value("Row 2", 1, ~beat_grid.at(1)),
+	~player.value("Row 3", 2, ~beat_grid.at(2)),
+	~player.value("Row 4", 3, ~beat_grid.at(3)),
+	~player.value("Row 5", 4, ~beat_grid.at(4)),
+	~player.value("Row 6", 5, ~beat_grid.at(5)),
+	~player.value("Row 7", 6, ~beat_grid.at(6)),
+	~player.value("Row 8", 7, ~beat_grid.at(7)),
 ];
 )
 
@@ -67,7 +62,7 @@ s.meter;
 //activate MIDI callbacks for noteOn/noteOff
 (
 ~noteOn = { arg src, chan, num, vel;
-	if (chan != 0, {
+	if (chan != ~channel, {
 		~note_grid.do { arg row, i;
 			// find which column matches to the note in the beat list
 			var beat_col = row.indexOf(num);
@@ -81,7 +76,7 @@ s.meter;
 };
 
 ~noteOff = { arg src,chan,num,vel;
-	if (chan != 0, {
+	if (chan != ~channel, {
 		~note_grid.do { arg row, i;
 			// find which column matches to the note in the beat list
 			var beat_col = row.indexOf(num);
