@@ -1,8 +1,8 @@
-MIDIIn.connectAll;    // lazy, refine in the future to specific channel
 s.boot;
 
-// Ableton Push 2 8x8 grid midi note mappings
+// Init main vars: note layout, beat grid, player instances
 (
+// Ableton Push 2 8x8 grid midi note mappings
 ~note_grid = [
 [92, 93, 94, 95, 96, 97, 98, 99],
 [84, 85, 86, 87, 88, 89, 90, 91],
@@ -14,53 +14,39 @@ s.boot;
 [36, 37, 38, 39, 40, 41, 42, 43],
 ];
 
-~beat_grid = [
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-	Array.fill(8, 0),
-];
-
 ~channel = 0; // input channel, 0-based index so this is MIDI-channel 1
 
-//player definition and init
-// turn into proper class
-~player = {
-	arg name, row, beat_list;
-	{
-		arg col;
-		var amp;
+~cols = 8; // width of grid
 
-		amp = beat_list.at(col);
-		// [name, row, col, amp, beat_list].postln;
-		// ~beat_grid.do { arg beat_row; beat_row.postln;};''.postln;
+~bars = 1; // ideally loops will be more than one bar (TODO: integrate in player/grid)
 
-		if (amp != nil, {
-			if( amp>0, { ["Playing: ", name, " step ", col].postln; } );
-		});
-		// add synth playback here, passing in beat_list and amp value
-	}
-};
+~beat_grid = [
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+	Array.fill(~cols, 0),
+];
 
 ~player_rows = [
-	~player.value("Row 1", 0, ~beat_grid.at(0)),
-	~player.value("Row 2", 1, ~beat_grid.at(1)),
-	~player.value("Row 3", 2, ~beat_grid.at(2)),
-	~player.value("Row 4", 3, ~beat_grid.at(3)),
-	~player.value("Row 5", 4, ~beat_grid.at(4)),
-	~player.value("Row 6", 5, ~beat_grid.at(5)),
-	~player.value("Row 7", 6, ~beat_grid.at(6)),
-	~player.value("Row 8", 7, ~beat_grid.at(7)),
+	SeqPlayer.new("Row 1", 0, ~beat_grid.at(0), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 2", 1, ~beat_grid.at(1), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 3", 2, ~beat_grid.at(2), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 4", 3, ~beat_grid.at(3), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 5", 4, ~beat_grid.at(4), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 6", 5, ~beat_grid.at(5), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 7", 6, ~beat_grid.at(6), SeqBaseInstrument.new),
+	SeqPlayer.new("Row 8", 7, ~beat_grid.at(7), SeqBaseInstrument.new),
 ];
 )
 
 
-//activate MIDI callbacks for noteOn/noteOff
+//activate MIDI in and callbacks for noteOn/noteOff
 (
+MIDIIn.connectAll;    // lazy, refine in the future to specific channel
 ~noteOn = { arg src, chan, num, vel;
 	if (chan != ~channel, {
 		~note_grid.do { arg row, i;
@@ -92,21 +78,17 @@ s.boot;
 MIDIIn.addFuncTo(\noteOn, ~noteOn);
 MIDIIn.addFuncTo(\noteOff, ~noteOff);
 
-)
-
-(
 c = TempoClock.new(1);
 
 ~swing = 0.0; // swing amount
 ~times = [1 + ~swing, 1 - ~swing, 1 + ~swing, 1 - ~swing, 1 + ~swing, 1 - ~swing, 1 + ~swing, 1 - ~swing]; // add swing
 {
 	inf.do{
-		arg i; // consider modulus to prevent high numbers when running indefinitely
+		arg i;
 		var index;
 		index = (i % 8).asInteger;
 		~player_rows.do { arg player_row;
-			// value here is ugly/misleading; make a different class function
-			player_row.value(index);
+			player_row.play(index);
 		};
 
 		~times.at(index).wait;
